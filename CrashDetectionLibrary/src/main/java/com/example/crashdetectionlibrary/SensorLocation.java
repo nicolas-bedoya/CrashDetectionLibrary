@@ -4,6 +4,7 @@ import android.app.Notification;
 import android.content.Context;
 import android.hardware.Sensor;
 import android.hardware.SensorEvent;
+import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
 import android.location.Address;
 import android.location.Geocoder;
@@ -30,8 +31,8 @@ public class SensorLocation implements Globals {
     public static double[] LocationChanged(@NonNull Location location, int currentVelocity, int previousVelocity) {
         double[] LocationChangeArray;
         int impactVelocity = 0;
-        int longitude = (int)location.getLongitude();
-        int latitude = (int)location.getLatitude();
+        double longitude = location.getLongitude();
+        double latitude = location.getLatitude();
         int velocityChange = currentVelocity - previousVelocity;
 
         // previous velocity is greater than current velocity in moments of crash, therefore
@@ -42,6 +43,7 @@ public class SensorLocation implements Globals {
                 impactVelocity = 1;
             }
         }
+
         LocationChangeArray = new double[]{latitude,longitude, impactVelocity};
 
         Log.d(TAG, "Lat: " + latitude + " Long: " + longitude + " VChange: " + velocityChange);
@@ -49,7 +51,7 @@ public class SensorLocation implements Globals {
     }
 
     // change the type to a list of arrays of doubles
-    public static double[] SensorChanged(SensorEvent event, SensorManager sensorManager) {
+    public static double[] SensorChanged(SensorEvent event, SensorEventListener sensorEventListener) {
         double sensorFlag = 0;
         // impactSensorType not used yet
         double[] SensorChangedArray = new double[4];
@@ -99,6 +101,7 @@ public class SensorLocation implements Globals {
     public static String[] getCompleteAddressString(Context context, double latitude, double longitude) {
         String strAdd = "";
         Geocoder geocoder = new Geocoder(context, Locale.getDefault());
+
         try {
             List<Address> addresses = geocoder.getFromLocation(latitude, longitude, 1);
             if (addresses != null) {
@@ -106,7 +109,7 @@ public class SensorLocation implements Globals {
                 StringBuilder strReturnedAddress = new StringBuilder("");
 
                 for (int i = 0; i <= returnedAddress.getMaxAddressLineIndex(); i++) {
-                    strReturnedAddress.append(returnedAddress.getAddressLine(i)).append("\n");
+                    strReturnedAddress.append(returnedAddress.getAddressLine(i))/*.append("\n")*/;
                 }
                 strAdd = strReturnedAddress.toString();
                 Log.d(TAG, strReturnedAddress.toString());
@@ -117,6 +120,7 @@ public class SensorLocation implements Globals {
             e.printStackTrace();
             Log.d(TAG, "Cannot get Address!");
         }
+        Log.d(TAG, "sensorLocation lat: " + String.valueOf(longitude) + " long: " + String.valueOf(latitude));
         return new String[]{strAdd, String.valueOf(latitude), String.valueOf(longitude)};
     }
 

@@ -3,8 +3,10 @@ package com.example.crashdetectionexample;
 import android.Manifest;
 import android.app.Notification;
 import android.app.Service;
+import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.pm.PackageManager;
 import android.hardware.Sensor;
 import android.hardware.SensorEvent;
@@ -21,6 +23,7 @@ import androidx.annotation.Nullable;
 import androidx.core.app.ActivityCompat;
 import androidx.core.app.NotificationCompat;
 import androidx.core.app.NotificationManagerCompat;
+import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
 import static com.example.crashdetectionlibrary.NotificationBase.CHANNEL_ID;
 
@@ -40,39 +43,32 @@ public class ActivityService extends Service implements LocationListener, Sensor
 
     Sensor accelerometer, gyroscope, magnetometer;
     NotificationManagerCompat notificationManager;
-    double xA, yA, zA;
-    double xG, yG, zG;
-    double xM, yM, zM;
 
     double[] sensorData = new double[4];
     double[] accelerationData = new double[4];
     double[] gyroscopeData = new double [4];
 
     double[] LocationDetails = new double[3];
-    int currentVelocity, previousVelocity;
+    int currentVelocity, previousVelocity; // used for finding velocity change, units in m/s
 
     double longitude, latitude;
 
-    String[] Emergency1 = {"Will", "Dunn", "0423100771"};
-    String[] Emergency2 = {"Liam", "Carloss", "0449866461"};
-    String[] User = {"Nicolas", "Bedoya"};
+    String[] LocationPacket; // stores location details in string array which is passed into sendSMS for when
+    // crash is detected
 
-    String[] LocationPacket;
-
-    boolean firstInstance = true;
-    boolean impactGyroDetected = false, impactAccelDetected = false;
-    boolean impactVelocityDetected = false;
+    boolean firstInstance = true; // used for logic in finding the current and previous velocity
+    boolean impactGyroDetected = false;
+    boolean impactAccelDetected = false;
+    boolean impactVelocityDetected = false; // set to true if change in velocity is greater than 10m/s
     boolean impactDetected = false;
 
     int impactVelocityTimer = 0;
     int impactSensorTimer = 0;
 
-
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
         Log.d(TAG, "onStartCommand (location) called");
         // starting foreground, therefore notification has to be made clear to alert user
-        // channel ID obtained from ActivityNotification so notifications
         Notification ServiceNotification;
         ServiceNotification = NotificationType.ProvideServiceNotification(this);
         startForeground(1, ServiceNotification);
@@ -85,10 +81,12 @@ public class ActivityService extends Service implements LocationListener, Sensor
         sensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE);
         accelerometer = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
         gyroscope = sensorManager.getDefaultSensor(Sensor.TYPE_GYROSCOPE);
-        magnetometer = sensorManager.getDefaultSensor(Sensor.TYPE_MAGNETIC_FIELD);
+
         registerUpdates();
     }
 
+    // called to register sensor and location listeners
+    // resets flags for detection to occur with a fresh slate
     public void registerUpdates() {
         locationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
         if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
@@ -100,14 +98,23 @@ public class ActivityService extends Service implements LocationListener, Sensor
         locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 50, 0, this);
         sensorManager.registerListener(ActivityService.this, accelerometer, DELAY);
         sensorManager.registerListener(ActivityService.this, gyroscope, DELAY);
-        sensorManager.registerListener(ActivityService.this, magnetometer, DELAY);
+        // sensorManager.registerListener(ActivityService.this, magnetometer, DELAY);
+
+        impactDetected = false;
+        impactVelocityDetected = false;
+        impactGyroDetected = false;
+        impactAccelDetected = false;
     }
 
     @Override
     public void onSensorChanged(SensorEvent event) {
         if (!impactGyroDetected && !impactDetected && !impactAccelDetected) {
-            sensorData = SensorLocation.SensorChanged(event, sensorManager);
+            sensorData = SensorLocation.SensorChanged(event, this);
+            //sensorData = {dataX, dataY, dataZ, ID, CrashFlag}
+            // ID -> checks whether it relates to gyroscope or acceleration
+            // CrashFlag -> checks whether a crash is detected
 
+            // NOTE: x,y,z might not need to be passed into the application from library
             if (sensorData[3] == Globals.GYROSCOPE_ID) {
                 gyroscopeData = sensorData;
                 if (gyroscopeData[4] == Globals.IMPACT_TRUE) {
@@ -115,28 +122,39 @@ public class ActivityService extends Service implements LocationListener, Sensor
                     impactGyroDetected = true;
                 }
             }
+
             else if (sensorData[3] == Globals.ACCELERATION_ID) {
                 accelerationData = sensorData;
                 if (accelerationData[4] == Globals.IMPACT_TRUE) {
                     Log.d(TAG, "impact acceleration detected");
                     impactAccelDetected = true;
+                    //impactVelocityDetected = true; // remove me
                 }
             }
         }
-        impactVelocityDetected = true; // remove me
-        if ((impactAccelDetected || impactGyroDetected) && impactVelocityDetected) {
+
+        // CrashCheck here, checks if all flags are triggered to TRUE
+        // If they are, then the alertDialog is processed and added to screen
+        if ((impactAccelDetected || impactGyroDetected)  && impactVelocityDetected) {
             impactAccelDetected = false;
             impactGyroDetected = false;
             impactVelocityDetected = false;
             Log.d(TAG, "impactDetected = " + impactDetected);
+
             sensorManager.unregisterListener(this, accelerometer);
             sensorManager.unregisterListener(this, gyroscope);
-            sensorManager.unregisterListener(this, magnetometer);
             locationManager.removeUpdates(this);
+
             NotificationType.ProvideCrashNotification(this, notificationManager);
-            LocationPacket = SensorLocation.getCompleteAddressString(this, longitude, latitude);
-            AlertDialog.AlertDialogAppear(this, Emergency1, Emergency2, User, LocationPacket);
-            //SendSMS.sendSMS(Emergency1, Emergency2, User, LocationPacket,this);
+            Log.d(TAG, "lat: " + latitude + " long: " + longitude);
+            LocationPacket = SensorLocation.getCompleteAddressString(this, latitude, longitude);
+
+            Intent alertIntent = new Intent(Globals.ALERT_DIALOG_REQUEST);
+            alertIntent.putExtra("Location-Packet", LocationPacket);
+            Log.d(TAG, LocationPacket[0] + " " + LocationPacket[1] + " " + LocationPacket[2]);
+
+            LocalBroadcastManager.getInstance(ActivityService.this).sendBroadcast(alertIntent);
+            stopSelf();
         }
     }
 
@@ -152,6 +170,7 @@ public class ActivityService extends Service implements LocationListener, Sensor
 
     @Override
     public void onLocationChanged(@NonNull Location location) {
+        // try and add this into sensorLocation to filter out as much as possible from the app
         Log.d(TAG, "hello location");
         if (!impactVelocityDetected) {
             if (firstInstance) {
@@ -162,12 +181,16 @@ public class ActivityService extends Service implements LocationListener, Sensor
                 currentVelocity = (int) ((int) location.getSpeed() * 3.6); // units in km/h
             }
             LocationDetails = SensorLocation.LocationChanged(location, currentVelocity, previousVelocity);
+
+            latitude = LocationDetails[0];
+            longitude = LocationDetails[1];
+
             if (LocationDetails[2] == Globals.IMPACT_TRUE) {
                 impactVelocityDetected = true;
             }
         } else {
             impactVelocityTimer++;
-            if (impactVelocityTimer == 3) {
+            if (impactVelocityTimer == 4) {
                 impactVelocityDetected = false;
                 impactAccelDetected = false;
                 impactGyroDetected = false;
@@ -175,10 +198,12 @@ public class ActivityService extends Service implements LocationListener, Sensor
             }
         }
 
+        // This is implemented here since location is checked every second, therefore the impact
+        // accel and gyro can be reset after 3 seconds within the location listener
         if (impactGyroDetected || impactAccelDetected) {
             impactSensorTimer++;
             Log.d(TAG, "impactSensorTimer " + impactSensorTimer);
-            if (impactSensorTimer == 3) {
+            if (impactSensorTimer == 4) {
                 impactVelocityDetected = false;
                 impactAccelDetected = false;
                 impactGyroDetected = false;
@@ -191,12 +216,13 @@ public class ActivityService extends Service implements LocationListener, Sensor
     public void onDestroy() {
         sensorManager.unregisterListener(this, accelerometer);
         sensorManager.unregisterListener(this, gyroscope);
-        sensorManager.unregisterListener(this, magnetometer);
         locationManager.removeUpdates(this);
+
         impactDetected = false;
         impactVelocityDetected = false;
         impactGyroDetected = false;
         impactAccelDetected = false;
+        stopForeground(true);
         super.onDestroy();
     }
 }

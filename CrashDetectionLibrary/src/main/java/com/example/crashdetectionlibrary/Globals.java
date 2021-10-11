@@ -15,7 +15,8 @@ public interface Globals {
     public static int GYROSCOPE_ID = 1;
     public static int ACCELERATION_ID = 2;
     public static int IMPACT_TRUE = 1;
-    public static int IMPACT_FALSE = 0;
+
+    public static String ALERT_DIALOG_REQUEST = "alert-dialog-request";
 
 
 }
