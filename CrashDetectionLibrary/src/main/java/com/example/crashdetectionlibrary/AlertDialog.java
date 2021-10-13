@@ -28,9 +28,8 @@ public class AlertDialog extends AppCompatActivity {
                     @Override
                     public void onClick(DialogInterface dialog, int which) {
                         Log.d(TAG, LocationPacket[0] + " " + LocationPacket[1] + " " + LocationPacket[2]);
-                        SendSMS.sendSMS(Emergency1, Emergency2, User, LocationPacket, context);
+                        //SendSMS.sendSMS(Emergency1, Emergency2, User, LocationPacket, context);
                         impactConfirmed[0] = true;
-
                         Intent StopServiceIntent = new Intent(Globals.END_CRASH_CHECK);
                         LocalBroadcastManager.getInstance(AlertDialog.this).sendBroadcast(StopServiceIntent);
                         dialog.dismiss();
@@ -62,15 +61,16 @@ public class AlertDialog extends AppCompatActivity {
                         timeout--;
                         handler.postDelayed(this, 1000);
                     }else {
-                        SendSMS.sendSMS(Emergency1, Emergency2, User, LocationPacket, context);
                         impactConfirmed[0] = true;
+                        Intent StopServiceIntent = new Intent(Globals.END_CRASH_CHECK);
+                        LocalBroadcastManager.getInstance(AlertDialog.this).sendBroadcast(StopServiceIntent);                        impactConfirmed[0] = true;
                         dialog.dismiss();
                     }
                 }
             }
         };
         handler.post(runnable);
-    }
 
+    }
 
 }

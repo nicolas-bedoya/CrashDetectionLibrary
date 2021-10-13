@@ -10,6 +10,7 @@ public interface Globals {
     public static String START_CRASH_DETECTION_CHECK = "start-crash-detection-check";
     public static String UNREGISTER_SENSOR_REQUEST = "unregister-sensor-request";
     public static String END_CRASH_CHECK = "end-crash-check";
+    public static String CRASH_CONFIRMED = "crash-confirmed";
     public static String DISMISS_ALERT_DIALOG = "dismiss-alert-dialog";
 
     public static int GYROSCOPE_ID = 1;

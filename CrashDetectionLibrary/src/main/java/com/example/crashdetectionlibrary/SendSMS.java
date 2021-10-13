@@ -27,11 +27,11 @@ public class SendSMS {
 
             String SMS1 = "Hi " + Emergency1[0] + " " + Emergency1[1] + ", " + User[0] +
                     " " + User[1] + " may have experienced a crash. " + "They are located at " + address + " (" + location_latitude
-                    + "," + location_longitude + ") " + LocationPacket[0] ;
+                    + "," + location_longitude + ") ";
 
             String SMS2 = "Hi " + Emergency2[0] + " " + Emergency2[1] + ", " + User[0] +
                     " " + User[1] + " may have experienced a crash. " + "They are located at " + address + " (" + location_latitude
-                    + "," + location_longitude + ") "  + LocationPacket[0] ;
+                    + "," + location_longitude + ") " ;
 
             String SMS_link = "http://maps.google.com/maps?q=" + latitude_link + "," + longitude_link + "+(My+Point)&z=14&ll=" + latitude_link + "," + longitude_link;
 

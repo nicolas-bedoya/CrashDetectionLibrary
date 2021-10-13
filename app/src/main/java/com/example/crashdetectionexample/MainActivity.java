@@ -17,9 +17,11 @@ import android.widget.Button;
 
 import com.example.crashdetectionlibrary.AlertDialog;
 import com.example.crashdetectionlibrary.Globals;
+import com.example.crashdetectionlibrary.SendSMS;
 
 public class MainActivity extends AppCompatActivity implements View.OnClickListener {
     public Button button;
+    boolean impactConfirmed = false;
 
     //permissions must be added in application activity
     String[] PERMISSIONS = {
@@ -80,6 +82,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             LocationPacket = intent.getStringArrayExtra("Location-Packet");
             AlertDialog mAlertDialog = new AlertDialog();
             mAlertDialog.AlertDialogAppear(mContext, Emergency1, Emergency2, User, LocationPacket);
+
         }
     };
 
@@ -89,6 +92,10 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             Log.d(TAG, "Service stop");
             Intent ServiceIntent = new Intent(MainActivity.this, ActivityService.class);
             stopService(ServiceIntent);
+
+            impactConfirmed = true;
+            SendSMS.sendSMS(Emergency1, Emergency2, User, LocationPacket, mContext);
+            Log.d(TAG, "Crash confirmed, calling SMS now... impact confirmed = " + impactConfirmed);
         }
     };
 
@@ -96,8 +103,17 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         @Override
         public void onReceive(Context context, Intent intent) {
             Log.d(TAG, "sensor restart called");
+            impactConfirmed = false;
             Intent ServiceIntent = new Intent(MainActivity.this, ActivityService.class);
             startService(ServiceIntent);
+        }
+    };
+
+    private BroadcastReceiver mMessageReceiverSendSMS = new BroadcastReceiver() {
+        public void onReceive(Context context, Intent intent) {
+            impactConfirmed = true;
+            SendSMS.sendSMS(Emergency1, Emergency2, User, LocationPacket, mContext);
+            Log.d(TAG, "Crash confirmed, calling SMS now... impact confirmed = " + impactConfirmed);
         }
     };
 

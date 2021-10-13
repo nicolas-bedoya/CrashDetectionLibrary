@@ -26,8 +26,6 @@ public class SensorLocation implements Globals {
     private static final int DELAY = 10000; // units in milliseconds
     private static final String TAG = "ActivityService";
 
-    //public SensorLocation() {}
-
     public static double[] LocationChanged(@NonNull Location location, int currentVelocity, int previousVelocity) {
         double[] LocationChangeArray;
         int impactVelocity = 0;

@@ -36,6 +36,8 @@ import com.example.crashdetectionlibrary.NotificationType;
 
 public class ActivityService extends Service implements LocationListener, SensorEventListener {
 
+    MainActivity mainActivity = new MainActivity();
+
     private static final String TAG = "ActivityService";
     protected LocationManager locationManager;
     public SensorManager sensorManager;
@@ -108,8 +110,9 @@ public class ActivityService extends Service implements LocationListener, Sensor
 
     @Override
     public void onSensorChanged(SensorEvent event) {
+        SensorEventListener listener = this;
         if (!impactGyroDetected && !impactDetected && !impactAccelDetected) {
-            sensorData = SensorLocation.SensorChanged(event, this);
+            sensorData = SensorLocation.SensorChanged(event, listener);
             //sensorData = {dataX, dataY, dataZ, ID, CrashFlag}
             // ID -> checks whether it relates to gyroscope or acceleration
             // CrashFlag -> checks whether a crash is detected
@@ -128,7 +131,7 @@ public class ActivityService extends Service implements LocationListener, Sensor
                 if (accelerationData[4] == Globals.IMPACT_TRUE) {
                     Log.d(TAG, "impact acceleration detected");
                     impactAccelDetected = true;
-                    //impactVelocityDetected = true; // remove me
+                    impactVelocityDetected = true; // remove me
                 }
             }
         }
@@ -155,6 +158,7 @@ public class ActivityService extends Service implements LocationListener, Sensor
 
             LocalBroadcastManager.getInstance(ActivityService.this).sendBroadcast(alertIntent);
             stopSelf();
+
         }
     }
 
