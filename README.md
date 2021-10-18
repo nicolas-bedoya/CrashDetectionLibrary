@@ -93,15 +93,27 @@ Alert Dialog appears in the MainActivity context (this context can be replaced w
 If the user does not respond to the alert dialog on screen; the same response as described above will be produced. 
 ‘Dismiss’ allows for the service to recommence as the service is shutdown once the alert dialog appears. This means that the application will continue to assess the data and reconfigure flags etc.
 
-2.2.4.	Sending SMS to Emergency Contacts 
+#### Sending SMS to Emergency Contacts 
 The sending of SMS is only performed once AlertDialog confirms there is no response from user after 120 seconds. The class obtains a method sendSMS which takes the following arguments in chronological order from first to last:
 -	String[] Emergency1
 -	String[] Emergency2
 -	String[] User
 -	String[] LocationPacket
 -	Context context
-Contact1, Contact2, and User all obtain
-2.3	Method of logic
+
+#### Understanding of Broadcasts
+Broadcasts were used throughout the application to update values after specific events. Receivers were implemented within the MainActivity which listened for events. The receivers are listed below.
+- mMessageReceiverAlertDialog
+- mMessageReceiverStopService
+- mMessageReceiverStartService 
+
+The intent filter of mMessageReceiverAlertDialog is ALERT_DIALOG_REQUEST, found within the Globals interface. The Broadcast is called immediately after confirmation of the crash from ActivityService. The receiver calls the method AlertDialogAppear from the AlertDialog class. 
+
+The intent filter of mMessageReceiverStopService is END_CRASH_CHECK from the Globals interface. It is called from the AlertDialog once a crash is entirely confirmed. A variable 'impactConfirmed' is updated to TRUE, which can be used in further implementation which confirms the event. For simplicity of demonstration, method sendSMS from class SendSMS is called.
+
+The intent filter of mMessageReceiverStartService is ACTIVATE_SENSOR_REQUEST from the Globals interface. The receiver starts the service ActivityService from AlertDialog. This occurs when the user provides a response showing that there is no crash experienced, allowing for the service to recommence.
+
+### Method of logic
 
 -	MainActivity is launched as the first activity from the application
 -	Two buttons are prompted on the screen: ‘Start Ride’ and ‘End Ride’
